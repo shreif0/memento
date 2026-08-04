@@ -18,9 +18,28 @@ and safety invariants this build is held to.
 2. **Collapses achieved sub-goals** into a single synthetic message before
    each request goes out — automating the manual "scroll back, edit an old
    message to say what's done, continue" workflow.
-3. **Turns on Anthropic's native context-clearing beta** by default when
-   you're running an Anthropic model, instead of reimplementing what
-   Anthropic already ships server-side.
+3. **Turns on Anthropic's native context-clearing beta** when you're running
+   an Anthropic model, instead of reimplementing what Anthropic already
+   ships server-side. **Experimental**: whether opencode actually forwards
+   these request options/headers to the Anthropic SDK call underneath has
+   not yet been confirmed — this ships behind a flag until it is.
+
+## Safety invariants
+
+- Never collapses or truncates one half of an unresolved tool_use/tool_result
+  pair — opencode's own typed `Part` objects make "resolved" checkable
+  directly, so this isn't a heuristic.
+- Fails closed: if it's unsure whether a span is safe to collapse, it skips
+  it. No collapse this turn is always a legal outcome.
+- The goal-collapse transform never mutates your persisted session — only
+  the outgoing request. Your session file always reflects what you actually
+  did; state divergence from that is a known, documented limitation, not a
+  hidden one.
+- Truncation never fires below a configurable size threshold, and never
+  touches a tool result inside a still-open turn.
+
+Full detail and the exact acceptance criteria this build is held to: see
+[`done.md`](./done.md).
 
 ## What it explicitly does not do (v1)
 
