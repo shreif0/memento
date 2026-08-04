@@ -11,6 +11,15 @@ function textEntry(id: string, role: "user" | "assistant", text: string): Messag
   }
 }
 
+function toolEntry(id: string, tool: string, status: "completed" | "error"): MessageEntry {
+  const base = { id: `${id}-tool`, sessionID: "ses_1", messageID: id, type: "tool" as const, callID: id, tool }
+  const state =
+    status === "completed"
+      ? { status, input: {}, output: "the output", title: tool, metadata: {}, time: { start: 0, end: 1 } }
+      : { status, input: {}, error: "it broke", time: { start: 0, end: 1 } }
+  return { info: { id, sessionID: "ses_1", role: "assistant" } as any, parts: [{ ...base, state } as any] }
+}
+
 const sampleSpan: MessageEntry[] = [
   textEntry("u1", "user", "read the config file"),
   textEntry("a1", "assistant", "done, it uses JSON"),
@@ -26,7 +35,7 @@ interface FakeClientOptions {
 }
 
 function makeFakeClient(opts: FakeClientOptions = {}) {
-  const calls = { create: 0, prompt: 0, delete: 0, deletedIds: [] as string[] }
+  const calls = { create: 0, prompt: 0, delete: 0, deletedIds: [] as string[], promptTexts: [] as string[] }
   const client = {
     session: {
       async create(_args: any) {
@@ -35,8 +44,9 @@ function makeFakeClient(opts: FakeClientOptions = {}) {
         if (opts.createId === null) return { data: undefined }
         return { data: { id: opts.createId ?? "ses_judge_1" } }
       },
-      async prompt(_args: any) {
+      async prompt(args: any) {
         calls.prompt++
+        calls.promptTexts.push(args.body.parts[0].text)
         if (opts.promptThrows) throw new Error("prompt failed")
         if (opts.promptReturnsNoData) return { data: undefined }
         return {
@@ -111,6 +121,29 @@ test("if session.prompt throws, the rejection propagates but the ephemeral sessi
   const judge = createOpencodeSessionJudge(client)
   await assert.rejects(judge(sampleSpan), /prompt failed/)
   assert.equal(calls.delete, 1, "cleanup must happen via finally even when prompt throws")
+})
+
+test("formats completed and error tool parts into the judge prompt, truncating long output", async () => {
+  const longOutput = "x".repeat(600)
+  const span: MessageEntry[] = [
+    textEntry("u1", "user", "run the build"),
+    toolEntry("a1", "bash", "completed"),
+    toolEntry("a2", "bash", "error"),
+  ]
+  // Override the completed tool's output to something identifiable and long.
+  const toolPart = span[1]!.parts[0] as any
+  toolPart.state.output = longOutput
+  toolPart.tool = "bash"
+
+  const { client, calls } = makeFakeClient({ promptReplyText: "NO_COLLAPSE" })
+  const judge = createOpencodeSessionJudge(client)
+  await judge(span)
+
+  const sent = calls.promptTexts[0]!
+  assert.match(sent, /\[user\] run the build/)
+  assert.match(sent, /\[tool:bash\] bash: x{500}/, "completed tool output present, truncated to 500 chars")
+  assert.ok(!sent.includes(longOutput), "must not include the full untruncated 600-char output")
+  assert.match(sent, /\[tool:bash error\] it broke/)
 })
 
 test("a failing session.delete does not crash the judge call or hide its result", async () => {
