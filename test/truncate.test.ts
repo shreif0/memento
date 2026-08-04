@@ -23,6 +23,18 @@ test("truncates output that exceeds the threshold and adds a placeholder pointer
   assert.match(output.output, new RegExp(`${original.length} chars`))
 })
 
+test("bounds a pathologically long tool name in the placeholder instead of letting it dominate", async () => {
+  const hook = createTruncateHook(10)
+  const longName = "mcp_" + "x".repeat(200)
+  const output = { title: longName, output: "0123456789abcdef", metadata: {} }
+  await hook(makeInput({ tool: longName }), output)
+  assert.ok(
+    output.output.length < 300,
+    `placeholder must not grow unbounded with tool name length, got ${output.output.length} chars`,
+  )
+  assert.ok(output.output.includes("…"), "long tool name should be truncated with an ellipsis marker")
+})
+
 test("default threshold matches DEFAULT_MAX_CHARS", async () => {
   const hook = createTruncateHook()
   const justUnder = "a".repeat(DEFAULT_MAX_CHARS)
