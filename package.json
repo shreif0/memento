@@ -1,0 +1,25 @@
+{
+  "name": "memento",
+  "version": "0.1.0",
+  "description": "Automatic, judged context pruning for opencode — evicts dead reasoning and resolved tool spans before they bloat your context window.",
+  "type": "module",
+  "main": "src/index.ts",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "context-management",
+    "llm"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "latest",
+    "typescript": "^5"
+  }
+}
