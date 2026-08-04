@@ -24,6 +24,14 @@ opencode itself before a plugin ever sees them — Memento does not parse wire
 JSON and does not need its own protocol state machine. This is a meaningfully
 safer position than the network-proxy shape considered and rejected earlier.
 
+**Unverified runtime caveat**: opencode's plugin runtime is Bun, not Node —
+this repo's tests run under `node --experimental-strip-types` because Bun
+isn't available in the dev environment this was built in. Source imports use
+explicit `.ts` extensions (verified to resolve correctly under Node's
+type-stripping loader); Bun is expected to resolve the same way, but that has
+not been confirmed by actually loading the plugin inside opencode/Bun. Flag
+this if it's ever load-bearing.
+
 Hooks used:
 
 - **`experimental.chat.messages.transform`** — rewrites the outgoing message
@@ -61,6 +69,11 @@ message to say what was achieved, continue."
 
 ## Non-negotiable safety invariants
 
+**Tier B (goal-collapse) only** — `tool.execute.after` (tier A) only ever
+sees already-resolved tool calls; it has no visibility into turn/message
+state, so "open turn" is not a concept it can observe or violate. These
+invariants apply to `experimental.chat.messages.transform`:
+
 - [ ] Never let a collapsed/transformed span include one half of an
       unresolved tool_use/tool_result pair. opencode's own `Part` typing makes
       "resolved" checkable directly — no heuristic parsing.
@@ -69,8 +82,13 @@ message to say what was achieved, continue."
 - [ ] The transform hook never mutates the persisted session store — only the
       outgoing request. State-divergence is a known, documented limitation in
       the README, not a hidden landmine.
-- [ ] Truncation (tier A) never fires below a configurable size threshold, and
-      never truncates a tool result that's still part of an open turn.
+
+**Tier A (truncation) invariant:**
+
+- [x] Truncation never fires at or below the threshold. Threshold is
+      user-configurable via `opencode.json`:
+      `{ "plugin": [["memento", { "maxChars": N }]] }`, defaulting to 4000
+      chars. Verified: `test/truncate.test.ts`.
 
 ## Explicit non-goals (v1)
 

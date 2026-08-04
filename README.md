@@ -26,17 +26,20 @@ and safety invariants this build is held to.
 
 ## Safety invariants
 
-- Never collapses or truncates one half of an unresolved tool_use/tool_result
-  pair — opencode's own typed `Part` objects make "resolved" checkable
-  directly, so this isn't a heuristic.
+Goal-collapse (tier B — sees full message state):
+- Never collapses one half of an unresolved tool_use/tool_result pair —
+  opencode's own typed `Part` objects make "resolved" checkable directly, so
+  this isn't a heuristic.
 - Fails closed: if it's unsure whether a span is safe to collapse, it skips
   it. No collapse this turn is always a legal outcome.
-- The goal-collapse transform never mutates your persisted session — only
-  the outgoing request. Your session file always reflects what you actually
-  did; state divergence from that is a known, documented limitation, not a
-  hidden one.
-- Truncation never fires below a configurable size threshold, and never
-  touches a tool result inside a still-open turn.
+- Never mutates your persisted session — only the outgoing request. Your
+  session file always reflects what you actually did; state divergence from
+  that is a known, documented limitation, not a hidden one.
+
+Truncation (tier A — only ever sees already-resolved tool output, no turn
+state to violate):
+- Never fires at or below the threshold. Configurable via `opencode.json`:
+  `{ "plugin": [["memento", { "maxChars": 4000 }]] }` — defaults to 4000.
 
 Full detail and the exact acceptance criteria this build is held to: see
 [`done.md`](./done.md).

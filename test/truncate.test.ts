@@ -19,7 +19,6 @@ test("truncates output that exceeds the threshold and adds a placeholder pointer
   const output = { title: "read", output: original, metadata: {} }
   await hook(makeInput({ tool: "read" }), output)
   assert.ok(output.output.startsWith("0123456789"))
-  assert.ok(output.output.length < original.length + 5 || output.output.includes("memento"))
   assert.match(output.output, /memento: truncated read output/)
   assert.match(output.output, new RegExp(`${original.length} chars`))
 })
