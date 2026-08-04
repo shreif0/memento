@@ -1,0 +1,23 @@
+{
+  "name": "@memento/harness",
+  "version": "0.1.0",
+  "description": "Control-plane for spawning and managing multiple opencode agent sessions, with Memento wired in for context management.",
+  "type": "module",
+  "main": "src/index.ts",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "node --experimental-strip-types src/dev.ts"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5"
+  }
+}
