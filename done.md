@@ -24,13 +24,18 @@ opencode itself before a plugin ever sees them — Memento does not parse wire
 JSON and does not need its own protocol state machine. This is a meaningfully
 safer position than the network-proxy shape considered and rejected earlier.
 
-**Unverified runtime caveat**: opencode's plugin runtime is Bun, not Node —
-this repo's tests run under `node --experimental-strip-types` because Bun
-isn't available in the dev environment this was built in. Source imports use
-explicit `.ts` extensions (verified to resolve correctly under Node's
-type-stripping loader); Bun is expected to resolve the same way, but that has
-not been confirmed by actually loading the plugin inside opencode/Bun. Flag
-this if it's ever load-bearing.
+**Runtime caveat, resolved by a live check**: opencode's plugin runtime is
+Bun, not Node — this repo's tests run under `node --experimental-strip-types`
+because Bun isn't available as a standalone binary in the dev environment
+this was built in. The concern was whether `.ts`-extension source imports
+would resolve correctly under Bun the way they do under Node. Resolved by
+actually loading the plugin in a real, locally-installed opencode instance
+(`opencode models` against an `opencode.json` pointing `"plugin"` at this
+repo's `src/index.ts` as a local file-source plugin) — loaded with no error.
+Confirmed the harness itself surfaces load failures clearly (verified
+separately with a deliberately-throwing plugin, which opencode reported as
+`"failed to load plugin"` with the exact thrown message) — so the clean load
+is a real positive, not a silently-skipped no-op.
 
 Hooks used:
 
@@ -153,9 +158,14 @@ invariants apply to `experimental.chat.messages.transform`:
       injection, scoped correctly to Anthropic-only. 24 tests, all offline/
       deterministic — no live API calls. `npm test` / `npm run typecheck`.
 - [ ] Git history: one commit per milestone, not a single dump commit.
-- [ ] Repo installs into a real opencode config
-      (`opencode.json` → `"plugin": ["memento"]`, or a local
-      `.opencode/plugins/` symlink) without throwing on load.
+- [x] Repo installs into a real opencode config without throwing on load.
+      Verified live against opencode 1.17.13: `opencode.json` with
+      `"plugin": ["<path-to-repo>/src/index.ts"]` (a local file-source
+      plugin spec — `spec.startsWith(".")`/absolute path, per
+      `packages/opencode/src/plugin/shared.ts`'s `isPathPluginSpec`) loads
+      cleanly under a real `opencode models` invocation. Package-name-based
+      install (`"plugin": ["memento"]` once published to npm) is the same
+      code path, unverified only insofar as the package isn't published yet.
 
 ## How critic passes are graded
 
