@@ -187,9 +187,13 @@ key before citing these as real token numbers anywhere.
       replies); `providerOptions.anthropic.contextManagement` injection,
       scoped correctly to Anthropic-only. 35 tests, all offline/deterministic
       — no live API calls. `npm test` / `npm run typecheck`.
-- [x] Git history: one commit per milestone (14 commits: scaffold → each
-      tier → each critic-driven fix round → live install verification →
-      benchmark), not a single dump commit.
+- [x] Git history: one commit per milestone, not a single dump commit
+      (scaffold → each tier → each critic-driven fix round → live install
+      verification → benchmark). Check the actual count yourself before
+      citing it anywhere — `git log --oneline | wc -l` — rather than trusting
+      a number written down here; it will keep changing as work continues
+      and a stale count is exactly the kind of claimed-but-not-verifiable
+      fact this file exists to prevent.
 - [x] Repo installs into a real opencode config without throwing on load.
       Verified live against opencode 1.17.13: `opencode.json` with
       `"plugin": ["<path-to-repo>/src/index.ts"]` (a local file-source
