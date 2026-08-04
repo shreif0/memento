@@ -144,6 +144,31 @@ output. Last run (chars/4 estimate): 12463 → 4565 chars after tier A (-63.4%)
 → 273 chars after tier B (-97.8% total, 2 judge calls). Re-run with a real
 key before citing these as real token numbers anywhere.
 
+## Live end-to-end verification
+
+Ran a real opencode session (`opencode run`, local ollama and hosted
+`opencode/deepseek-v4-flash-free` models, `--auto`) against a scratch
+project with Memento loaded and `maxChars: 500`, containing a 37890-char
+file. Confirmed by querying opencode's own SQLite session store
+(`opencode db path`, table `part`) directly, not by trusting the model's
+answer: the stored `tool` part's `output` field for the real `read` call
+ends in `[memento: truncated read output — 39901 chars, kept first 500.
+Re-run read to see the rest.]`, exactly as designed. The model still
+answered the user's question correctly using the truncated content plus a
+separate `wc -l` call.
+
+Side finding, not a defect: opencode retains its own untruncated
+`metadata.preview` copy of tool output alongside `output` (used for its own
+UI, as far as could be determined without reading its render path).
+`createTruncateHook` only ever mutates `output.output`, matching its
+documented scope; `metadata` was never claimed to be touched.
+
+The small local model tried first (`ollama/qwen2.5-coder:1.5b`) did not
+reliably emit real tool calls under this harness; it printed the intended
+tool call as plain JSON text instead of invoking it. Not a Memento issue,
+but worth knowing if reproducing this: use a model with reliable tool
+calling.
+
 ## Known limitations (not blockers, tracked honestly)
 
 - `judge.ts`'s ephemeral judge-session cleanup (`client.session.delete(...)`)
