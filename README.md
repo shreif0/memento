@@ -8,8 +8,11 @@ output and completed sub-goals — before it bloats your context window.
 Named after the movie: it can't hold onto everything, so it writes down what
 matters and lets the rest go.
 
-Status: early, v1 in progress. See [`done.md`](./done.md) for the exact scope
-and safety invariants this build is held to.
+Status: v1 feature-complete — all three tiers built, tested (35 tests,
+`npm test`), and gate-checked. Not yet published to npm; install locally by
+pointing `opencode.json` at this repo's `src/index.ts` (see Install below).
+See [`done.md`](./done.md) for the exact scope and safety invariants this
+build is held to.
 
 ## What it does (v1)
 
@@ -57,7 +60,39 @@ Full detail and the exact acceptance criteria this build is held to: see
 - No wire-protocol parsing of any kind — opencode hands plugins already-typed
   messages, and that's the only interface Memento uses.
 
+## Does it actually save tokens?
+
+`npm run bench` runs a synthetic-but-realistic session through the real tier
+A/B code (not a mock). Last run, char-count based (no funded API key in the
+build environment — set `ANTHROPIC_API_KEY` to get real token counts instead
+of the chars/4 estimate the script clearly labels otherwise):
+
+```
+Original content:              12463 chars
+After tier A (truncation):      4565 chars   -63.4%
+After tier B (goal-collapse):    273 chars   -97.8% total
+```
+
+Tier B's number is the **maximum-savings case** — the benchmark's judge
+always agrees to collapse, by design, to show what the mechanism does when
+it fires. It is not a claim about how often a real judge would agree on a
+real session. See [`done.md`](./done.md) → Benchmark for the full caveat.
+
 ## Install
+
+**Now, before npm publish** — point opencode at this repo's plugin entry
+directly (a local file-source plugin spec: opencode resolves any `"plugin"`
+entry starting with `.` or `/` as a path, not an npm package — this is
+live-verified against a real opencode instance, see `done.md`):
+
+```jsonc
+// opencode.json
+{
+  "plugin": ["/absolute/path/to/memento/src/index.ts"]
+}
+```
+
+**Once published to npm**, the same config becomes:
 
 ```jsonc
 // opencode.json — bare install, tiers A + C on, tier B (goal-collapse) off
@@ -74,8 +109,6 @@ Full detail and the exact acceptance criteria this build is held to: see
   }]]
 }
 ```
-
-(Package not yet published — install steps will be finalized once v1 lands.)
 
 ## License
 

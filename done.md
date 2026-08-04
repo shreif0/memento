@@ -106,12 +106,18 @@ sees already-resolved tool calls; it has no visibility into turn/message
 state, so "open turn" is not a concept it can observe or violate. These
 invariants apply to `experimental.chat.messages.transform`:
 
-- [ ] Never let a collapsed/transformed span include one half of an
+- [x] Never let a collapsed/transformed span include one half of an
       unresolved tool_use/tool_result pair. opencode's own `Part` typing makes
-      "resolved" checkable directly — no heuristic parsing.
-- [ ] Fail closed: if the judge is uncertain whether a span is safe to
+      "resolved" checkable directly — no heuristic parsing. Verified by hand
+      (loop-bound algebra) and by test in two independent critic passes on
+      `planCollapse`, including a regression test for the specific
+      tail-straddle bug that pass caught.
+- [x] Fail closed: if the judge is uncertain whether a span is safe to
       collapse, skip it. "No collapse this turn" is always a legal outcome.
-- [ ] The transform hook never mutates the persisted session store — only the
+      Verified: throwing judge, malformed/empty judge replies, failed
+      ephemeral-session creation — all covered in `test/collapse.test.ts` and
+      `test/judge.test.ts`.
+- [x] The transform hook never mutates the persisted session store — only the
       outgoing request. State-divergence is a known, documented limitation in
       the README, not a hidden landmine.
 
@@ -121,6 +127,22 @@ invariants apply to `experimental.chat.messages.transform`:
       user-configurable via `opencode.json`:
       `{ "plugin": [["memento", { "maxChars": N }]] }`, defaulting to 4000
       chars. Verified: `test/truncate.test.ts`.
+
+## Benchmark
+
+`npm run bench` (`bench/run.ts` + `bench/transcript.ts`). Runs a synthetic-but-
+structurally-real 9-entry session (a build-failure investigation, resolved,
+followed by an unrelated new task as the active tail) through the real tier
+A and tier B code — not a mock of it. Tier B uses a deterministic
+always-collapse fake judge (labeled as such in the output): this reports the
+**maximum-savings case, given the judge agrees** — not a claim about how
+often a real judge would agree. `[ ]` real-token-count mode
+(`ANTHROPIC_API_KEY` set → calls the real `count_tokens` endpoint) has not
+been exercised — no funded key in the environment this was built in; without
+it, the script reports a chars/4 estimate, clearly labeled as such in its own
+output. Last run (chars/4 estimate): 12463 → 4565 chars after tier A (-63.4%)
+→ 273 chars after tier B (-97.8% total, 2 judge calls). Re-run with a real
+key before citing these as real token numbers anywhere.
 
 ## Known limitations (not blockers, tracked honestly)
 
@@ -147,17 +169,27 @@ invariants apply to `experimental.chat.messages.transform`:
 
 ## Deliverables checklist
 
-- [ ] `LICENSE` — PolyForm Noncommercial 1.0.0, verbatim.
-- [ ] `README.md` — what it does, install steps, the two capabilities,
-      explicit non-goals, safety invariants, the known-unverified Anthropic
-      passthrough item.
-- [ ] `src/index.ts` + hook modules implementing A and B.
+- [x] `LICENSE` — PolyForm Noncommercial 1.0.0, verbatim. Diff-verified
+      against the live PolyForm source by an independent critic pass.
+- [x] `README.md` — what it does (all three tiers, opt-in status accurately
+      disclosed for tier B), install steps (both the working local-path form
+      and the future npm form), explicit non-goals, safety invariants split
+      correctly by tier, benchmark results with honest caveats.
+- [x] `src/index.ts` + hook modules implementing all three tiers
+      (`hooks/truncate.ts`, `hooks/collapse.ts`, `hooks/judge.ts`,
+      `hooks/anthropic-context.ts`).
 - [x] Tests: fail-closed invariant (a synthetic transcript with an open
-      tool_use never collapses across it, never straddles the kept tail);
-      truncation threshold behavior; `providerOptions.anthropic.contextManagement`
-      injection, scoped correctly to Anthropic-only. 24 tests, all offline/
-      deterministic — no live API calls. `npm test` / `npm run typecheck`.
-- [ ] Git history: one commit per milestone, not a single dump commit.
+      tool_use never collapses across it, never straddles the kept tail, and
+      the specific historical boundary bug has a regression test that
+      actually isolates it — confirmed by hand-tracing, not just trusting the
+      test name); truncation threshold behavior; `judge.ts`'s LLM-call
+      plumbing (create/prompt/delete failure and cleanup paths, malformed
+      replies); `providerOptions.anthropic.contextManagement` injection,
+      scoped correctly to Anthropic-only. 35 tests, all offline/deterministic
+      — no live API calls. `npm test` / `npm run typecheck`.
+- [x] Git history: one commit per milestone (14 commits: scaffold → each
+      tier → each critic-driven fix round → live install verification →
+      benchmark), not a single dump commit.
 - [x] Repo installs into a real opencode config without throwing on load.
       Verified live against opencode 1.17.13: `opencode.json` with
       `"plugin": ["<path-to-repo>/src/index.ts"]` (a local file-source

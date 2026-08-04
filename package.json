@@ -16,7 +16,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test test/*.test.ts"
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "bench": "node --experimental-strip-types bench/run.ts"
   },
   "devDependencies": {
     "@opencode-ai/plugin": "latest",
