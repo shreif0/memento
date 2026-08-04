@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Memento</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="brand">Memento</span>
+        <button id="new-agent" title="Spawn a new agent">+</button>
+      </div>
+      <ul id="agent-list" class="agent-list"></ul>
+    </aside>
+    <main class="main">
+      <div id="empty-state" class="empty-state">Select or spawn an agent to begin.</div>
+      <div id="transcript-view" class="transcript-view" hidden>
+        <div class="transcript-header">
+          <span id="agent-title"></span>
+          <span id="agent-id" class="agent-id"></span>
+        </div>
+        <div id="transcript" class="transcript"></div>
+        <form id="prompt-form" class="prompt-form">
+          <textarea id="prompt-input" placeholder="Message this agent..." rows="2"></textarea>
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </main>
+  </div>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

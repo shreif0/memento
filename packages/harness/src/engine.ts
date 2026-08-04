@@ -1,4 +1,6 @@
-import { createOpencode, type OpencodeClient } from "@opencode-ai/sdk"
+import { createOpencode, type OpencodeClient, type Message, type Part, type Event } from "@opencode-ai/sdk"
+
+export type { Message, Part, Event } from "@opencode-ai/sdk"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 
@@ -14,6 +16,11 @@ export type EngineOptions = {
 export type Agent = {
   id: string
   title: string
+}
+
+export type AgentMessage = {
+  info: Message
+  parts: Part[]
 }
 
 /**
@@ -67,6 +74,33 @@ export class AgentEngine {
       throw new Error(`Failed to list sessions: ${JSON.stringify(response.error)}`)
     }
     return response.data.map((session) => ({ id: session.id, title: session.title ?? "" }))
+  }
+
+  async messages(agentId: string): Promise<AgentMessage[]> {
+    const response = await this.client.session.messages({ path: { id: agentId } })
+    if (!response.data) {
+      throw new Error(`Failed to fetch messages for ${agentId}: ${JSON.stringify(response.error)}`)
+    }
+    return response.data
+  }
+
+  /** Send a prompt without blocking for the model's reply; poll messages() for the response. */
+  async promptAsync(agentId: string, text: string): Promise<void> {
+    const response = await this.client.session.promptAsync({
+      path: { id: agentId },
+      body: { parts: [{ type: "text", text }] },
+    })
+    if (response.error) {
+      throw new Error(`Failed to send prompt to ${agentId}: ${JSON.stringify(response.error)}`)
+    }
+  }
+
+  /** Live stream of every event on this server (session/message/part updates, etc). */
+  async *events(signal?: AbortSignal): AsyncGenerator<Event> {
+    const result = await this.client.event.subscribe({ signal })
+    for await (const event of result.stream) {
+      yield event as Event
+    }
   }
 
   async stop(): Promise<void> {
