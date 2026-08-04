@@ -91,10 +91,10 @@ interface is the only thing Memento speaks to.
 ## Does it actually save tokens?
 
 `npm run bench` runs a session that is synthetic but structurally realistic
-through the actual tier A and tier B code, not a stand-in for it. The most
-recent run, measured in characters rather than tokens because no funded API
-key was available in the environment this was built in (set
-`ANTHROPIC_API_KEY` to get a real token count instead):
+through the actual tier A and tier B code, not a stand-in for it. Run
+without an `ANTHROPIC_API_KEY` set, it falls back to a character count
+rather than a real token count; the most recent run looked like this. Set
+`ANTHROPIC_API_KEY` to get real numbers from the Messages API instead:
 
 ```
 Original content:              12463 chars
