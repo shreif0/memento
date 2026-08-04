@@ -62,10 +62,23 @@ time, before they're ever added to history. No judgment call, no LLM call,
 deterministic, configurable size threshold.
 
 **B. Judged tier — goal-collapse (`experimental.chat.messages.transform`)**
-An LLM-judge call inspects the message history for a span that represents an
-achieved sub-goal and, if found, replaces that whole span with one synthetic
-message before the request goes out — automating "scroll back, edit an old
-message to say what was achieved, continue."
+History is walked in fixed-size batches of turns from the start. A batch
+already judged in a prior request (cached by its last message id) is
+reapplied for free — this is what makes it cheap on a stable history, since
+the transform never mutates the persisted session and the harness resends
+the same original history every request, so the same batch boundary recurs.
+The first not-yet-cached, fully-resolved batch is judged fresh: if the judge
+says a sub-goal was achieved, that batch collapses into one synthetic
+message, mirroring "scroll back, edit an old message to say what was
+achieved, continue." **At most one fresh judge call per outgoing request**
+(configurable) — bounds judge cost/latency to a fixed ceiling regardless of
+how much history has accumulated; later eligible batches are left untouched
+and picked up on a subsequent request. Never touches the most recent
+`keepTail` turns (default 1) — the model's active working context.
+Opt-in: `{ "plugin": [["memento", { "collapse": true }]] }`, off by default.
+Implementation: `src/hooks/collapse.ts` (fully unit-tested, no live API
+needed) + `src/hooks/judge.ts` (the actual LLM call — see unverified note
+below).
 
 ## Non-negotiable safety invariants
 
