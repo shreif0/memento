@@ -211,14 +211,25 @@ test("planCollapse: a batch may never straddle into the kept tail, even when bat
   // 4 turns, keepTail=1 -> eligibleCount=3, batchSize=2. A naive `i < eligibleCount`
   // loop would let the second batch be turns.slice(2,4) = [u3, u4] — but u4 (index 3)
   // is the kept tail and must never be included in any batch, judged or not.
+  //
+  // maxJudgeCallsPerRequest is deliberately set well above what a second
+  // (illegal) batch would need — a prior version of this test used the
+  // default budget of 1, which independently blocked the second batch and
+  // made the assertions pass whether or not the boundary check was actually
+  // correct. Isolating the boundary logic means removing every other reason
+  // the loop could stop early.
   const messages = [
     ...turn("u1", "completed"),
     ...turn("u2", "completed"),
     ...turn("u3", "completed"),
     ...turn("u4", "completed"), // kept tail — must never appear in a batch
   ]
-  const plan = await planCollapse(messages, countingJudge, new Map(), { keepTail: 1, batchSize: 2 })
-  assert.equal(calls, 1, "only the [u1,u2] batch fits entirely within the eligible region")
+  const plan = await planCollapse(messages, countingJudge, new Map(), {
+    keepTail: 1,
+    batchSize: 2,
+    maxJudgeCallsPerRequest: 5,
+  })
+  assert.equal(calls, 1, "only the [u1,u2] batch fits entirely within the eligible region — not a budget effect")
   assert.equal(plan.messages.length, 1 + 2 + 2, "synthetic(u1,u2) + untouched u3 + untouched (kept-tail) u4")
   const tailIds = plan.messages.slice(1).map((e) => e.info.id)
   assert.deepEqual(tailIds, ["u3", "u3-a", "u4", "u4-a"])

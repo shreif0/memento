@@ -17,7 +17,10 @@ and safety invariants this build is held to.
    session history.
 2. **Collapses achieved sub-goals** into a single synthetic message before
    each request goes out — automating the manual "scroll back, edit an old
-   message to say what's done, continue" workflow.
+   message to say what's done, continue" workflow. **Opt-in, off by
+   default** — it's the highest-risk tier (an LLM judge call, no live
+   end-to-end test yet) and isn't enabled unless you ask for it:
+   `{ "plugin": [["memento", { "collapse": true }]] }`.
 3. **Turns on Anthropic's native context-clearing beta** by default when
    you're running an Anthropic model, instead of reimplementing what
    Anthropic already ships server-side. Source-verified against opencode's
@@ -57,9 +60,18 @@ Full detail and the exact acceptance criteria this build is held to: see
 ## Install
 
 ```jsonc
-// opencode.json
+// opencode.json — bare install, tiers A + C on, tier B (goal-collapse) off
 {
   "plugin": ["memento"]
+}
+
+// or with explicit options:
+{
+  "plugin": [["memento", {
+    "maxChars": 4000,          // tier A: truncation threshold
+    "collapse": true,          // tier B: goal-collapse — opt-in, off by default
+    "contextManagement": true  // tier C: Anthropic native clearing — on by default
+  }]]
 }
 ```
 

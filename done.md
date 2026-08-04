@@ -117,6 +117,19 @@ invariants apply to `experimental.chat.messages.transform`:
       `{ "plugin": [["memento", { "maxChars": N }]] }`, defaulting to 4000
       chars. Verified: `test/truncate.test.ts`.
 
+## Known limitations (not blockers, tracked honestly)
+
+- `judge.ts`'s ephemeral judge-session cleanup (`client.session.delete(...)`)
+  swallows its own failures (`.catch(() => {})`) so a delete failure never
+  crashes a real turn. Repeated failures would leak orphaned judge sessions
+  in the user's opencode session list over time. Not a correctness or
+  corruption risk — a hygiene one. Flagged by the tier-B critic pass, not
+  fixed in v1 (would need real telemetry/retry design, not a one-line patch).
+- The goal-collapse cache is a single `Map` shared across the whole plugin
+  process (the `Plugin`/`Hooks` API gives no per-session instance), keyed by
+  `sessionID:lastMessageId` specifically to prevent cross-session collisions
+  given that constraint — see `planCollapse` in `src/hooks/collapse.ts`.
+
 ## Explicit non-goals (v1)
 
 - No network proxy.

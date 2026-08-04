@@ -73,7 +73,9 @@ export interface CollapsePlan {
  * Rebuilds the message list for one outgoing request. History is walked in
  * fixed-size batches of turns from the start:
  *
- * - A batch already in `cache` (by its last message id) is applied without
+ * - A batch already in `cache` (keyed by `sessionID:lastMessageId` — the
+ *   cache is a single Map shared across the whole plugin process, not
+ *   per-session, so session-scoping the key matters) is applied without
  *   calling the judge — this is what makes repeated requests over a stable
  *   history cheap: the same batch boundary recurs every request (the
  *   persisted session is never mutated, so the harness resends the same
@@ -118,7 +120,12 @@ export async function planCollapse(
     if (anchor.role !== "user") break // structurally shouldn't happen; never guess
 
     const batchEntries = batchTurns.flat()
-    const key = batchEntries[batchEntries.length - 1]!.info.id
+    // Namespaced by sessionID: createCollapseHook's cache is a single Map
+    // shared across the whole plugin process (the Plugin/Hooks API carries no
+    // per-session instance), so keying by message id alone would only be
+    // safe if opencode's message ids were globally unique across sessions —
+    // an assumption this doesn't need to depend on.
+    const key = `${anchor.sessionID}:${batchEntries[batchEntries.length - 1]!.info.id}`
 
     let verdict = cache.get(key)
     if (!verdict) {
