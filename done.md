@@ -43,18 +43,24 @@ Hooks used:
 - **`tool.execute.after`** — fires when a tool call resolves, before its
   output is added to the session. Mechanical truncation happens here, once,
   at the source.
-- **`chat.params`** / **`chat.headers`** — escape hatch for provider-specific
-  request options/headers. Used to inject Anthropic's
-  `context-management-2025-06-27` beta (`clear_tool_uses_20250919`,
-  `clear_thinking_20251015`) when the active provider is Anthropic.
-  **Unverified**: whether opencode's Anthropic provider actually forwards
-  `options`/headers into the underlying SDK call in a way that reaches these
-  fields has not been confirmed against opencode source. Ships flagged
-  `experimental`; the associated test must fail loudly (not silently) if the
-  params aren't actually being forwarded, until this is confirmed some other
-  way (reading opencode's provider source, or a live integration check).
+- **`chat.params`** — sets `output.options.anthropic.contextManagement.edits`
+  to activate Anthropic's `context-management-2025-06-27` beta
+  (`clear_tool_uses_20250919`, `clear_thinking_20251015`) when the active
+  model is served through `@ai-sdk/anthropic`. **Source-verified**, not
+  guessed: traced opencode's own request-prep
+  (`packages/opencode/src/session/llm/request.ts`) confirming `chat.params`'s
+  `options` output becomes the AI SDK's `providerOptions`, then traced
+  `@ai-sdk/anthropic`'s language model source
+  (`packages/anthropic/src/anthropic-language-model.ts`) confirming
+  `providerOptions.anthropic.contextManagement.edits` maps directly to
+  Anthropic's wire format and the SDK adds the `anthropic-beta` header
+  itself — no manual header injection needed. What's still **not** verified:
+  an actual live call through this path (no running opencode server + funded
+  provider credentials in the environment this was built in).
+  `chat.headers` was considered but isn't needed — the SDK handles the beta
+  header on its own once `contextManagement` is set.
 
-## Two capabilities
+## Three capabilities
 
 **A. Mechanical tier — tool-output truncation (`tool.execute.after`)**
 Oversized tool results get truncated to a placeholder + pointer at creation
@@ -79,6 +85,14 @@ Opt-in: `{ "plugin": [["memento", { "collapse": true }]] }`, off by default.
 Implementation: `src/hooks/collapse.ts` (fully unit-tested, no live API
 needed) + `src/hooks/judge.ts` (the actual LLM call — see unverified note
 below).
+
+**C. Anthropic context-clearing passthrough (`chat.params`)**
+On by default when the active model is served through `@ai-sdk/anthropic`
+(structurally inert for every other provider). Turns on Anthropic's own
+native `context-management-2025-06-27` beta instead of reimplementing
+clearing logic. Implementation: `src/hooks/anthropic-context.ts`. Lower risk
+than tier B even without a live end-to-end test: an unrecognized provider
+option is inert, not corrupting.
 
 ## Non-negotiable safety invariants
 
@@ -120,11 +134,11 @@ invariants apply to `experimental.chat.messages.transform`:
       explicit non-goals, safety invariants, the known-unverified Anthropic
       passthrough item.
 - [ ] `src/index.ts` + hook modules implementing A and B.
-- [ ] Tests: fail-closed invariant (a synthetic transcript with an open
-      tool_use never collapses across it); truncation threshold behavior;
-      context_management param injection, or a test that explicitly and
-      loudly marks this unverified if it can't be checked in this
-      environment.
+- [x] Tests: fail-closed invariant (a synthetic transcript with an open
+      tool_use never collapses across it, never straddles the kept tail);
+      truncation threshold behavior; `providerOptions.anthropic.contextManagement`
+      injection, scoped correctly to Anthropic-only. 24 tests, all offline/
+      deterministic — no live API calls. `npm test` / `npm run typecheck`.
 - [ ] Git history: one commit per milestone, not a single dump commit.
 - [ ] Repo installs into a real opencode config
       (`opencode.json` → `"plugin": ["memento"]`, or a local

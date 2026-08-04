@@ -18,11 +18,12 @@ and safety invariants this build is held to.
 2. **Collapses achieved sub-goals** into a single synthetic message before
    each request goes out — automating the manual "scroll back, edit an old
    message to say what's done, continue" workflow.
-3. **Turns on Anthropic's native context-clearing beta** when you're running
-   an Anthropic model, instead of reimplementing what Anthropic already
-   ships server-side. **Experimental**: whether opencode actually forwards
-   these request options/headers to the Anthropic SDK call underneath has
-   not yet been confirmed — this ships behind a flag until it is.
+3. **Turns on Anthropic's native context-clearing beta** by default when
+   you're running an Anthropic model, instead of reimplementing what
+   Anthropic already ships server-side. Source-verified against opencode's
+   and `@ai-sdk/anthropic`'s own request-building code — not a live
+   end-to-end test, but a real, traced field mapping, not a guess. Disable
+   with `{"contextManagement": false}` if you don't want it.
 
 ## Safety invariants
 
